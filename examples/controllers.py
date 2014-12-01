@@ -10,16 +10,16 @@ def controller_up(controller=1):
 	rc = pyslurm.slurm_ping(controller)
 	if rc != 0:
 		rc = pyslurm.slurm_get_errno()
-		print "\t\tFailed - %s" % pyslurm.slurm_strerror(rc)
+		print "Failed - %s" % pyslurm.slurm_strerror(rc)
 	else:
-		print "\t\tSuccess"
+		print "Success"
 
 
 if __name__ == "__main__":
 
 	print "\n"
-	print "PySLURM\t%s" % (pyslurm.version())
-	print "SLURM\t%s-%s-%s\n" % (pyslurm.slurm_api_version())
+	print "PySlurm\t%s" % (pyslurm.version())
+	print "Slurm\t%s-%s-%s\n" % (pyslurm.slurm_api_version())
 
 	host = socket.gethostname()
 	print "Checking host.....%s\n" % host
@@ -36,10 +36,10 @@ if __name__ == "__main__":
 	print "\nPinging SLURM controllers\n"
 
 	if primary:
-		print "\tPrimary .....\r"
+		print "\tPrimary .....",
 		controller_up()
 
 	if backup:
-		print "\tBackup .....\r"
+		print "\tBackup .....",
 		controller_up(2)
 
