@@ -618,7 +618,6 @@ cdef extern from 'slurm/slurm.h' nogil:
 		uint64_t debug_flags
 		uint32_t def_mem_per_cpu
 		uint16_t disable_root_jobs
-		uint16_t dynalloc_port
 		uint16_t enforce_part_limits
 		char *epilog
 		uint32_t epilog_msg_time

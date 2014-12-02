@@ -405,7 +405,6 @@ cdef class config:
 			Ctl_dict[u'debug_flags'] = self.__Config_ptr.debug_flags
 			Ctl_dict[u'def_mem_per_cpu'] = self.__Config_ptr.def_mem_per_cpu
 			Ctl_dict[u'disable_root_jobs'] = bool(self.__Config_ptr.disable_root_jobs)
-			Ctl_dict[u'dynalloc_port'] = bool(self.__Config_ptr.dynalloc_port)
 			Ctl_dict[u'enforce_part_limits'] = bool(self.__Config_ptr.enforce_part_limits)
 			Ctl_dict[u'epilog'] = slurm.stringOrNone(self.__Config_ptr.epilog, '')
 			Ctl_dict[u'epilog_msg_time'] = self.__Config_ptr.epilog_msg_time
