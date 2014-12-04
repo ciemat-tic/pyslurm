@@ -9,6 +9,8 @@ from libc.stdint cimport int64_t, int32_t
 
 from libc.stdlib cimport malloc, free
 
+
+
 from cpython cimport bool
 from cpython.version cimport PY_MAJOR_VERSION
 
@@ -32,7 +34,11 @@ cdef extern from 'time.h' nogil:
 cdef extern from *:
 	ctypedef char* const_char_ptr "const char*"
 
-#ctypedef struct sockaddr_in slurm_addr_t
+
+
+#MANUEL here
+cdef extern from 'sys/types.h':
+	ctypedef long uid_t #not sure if long
 
 #
 # PySlurm helper functions
@@ -79,7 +85,7 @@ cdef extern char *slurm_bg_block_state_string(uint16_t)
 cdef extern char *slurm_conn_type_string(enum)
 cdef extern uint16_t slurm_get_preempt_mode()
 cdef extern char *slurm_job_reason_string(int inx)
-cdef extern int   slurm_job_state_num(char *state_name)
+cdef extern int slurm_job_state_num(char *state_name)
 cdef extern char *slurm_job_state_string(uint16_t inx)
 cdef extern char *slurm_node_state_string(uint32_t inx)
 cdef extern char *slurm_node_state_string_compact(uint32_t inx)
@@ -468,9 +474,9 @@ cdef extern from 'slurm/slurm.h' nogil:
 
 	ctypedef struct acct_gather_energy:
 		uint32_t base_consumed_energy
-		uint32_t base_watts               # lowest power consump of node, in watts 
-		uint32_t consumed_energy          # total energy consumed by node, in joules
-		uint32_t current_watts            # current power consump of node, in watts
+		uint32_t base_watts # lowest power consump of node, in watts 
+		uint32_t consumed_energy # total energy consumed by node, in joules
+		uint32_t current_watts # current power consump of node, in watts
 		uint32_t previous_consumed_energy
 		time_t poll_time
 
@@ -962,7 +968,7 @@ cdef extern from 'slurm/slurm.h' nogil:
 		uint16_t *cpus_per_node
 		uint32_t *cpu_count_reps
 		uint32_t node_cnt
-		#slurm_addr_t *node_addr
+
 		uint32_t error_code
 		dynamic_plugin_data_t *select_jobinfo
 
@@ -1036,7 +1042,7 @@ cdef extern from 'slurm/slurm.h' nogil:
 	
 	#
 	# NOTE: If setting node_addr and/or node_hostname then comma 
-	#       separate names and include an equal number of node_names 
+	# separate names and include an equal number of node_names 
 	#
 
 	ctypedef struct slurm_update_node_msg:
@@ -1310,6 +1316,230 @@ cdef extern from 'slurm/slurm.h' nogil:
 
 	ctypedef suspend_msg suspend_msg_t
 
+
+
+
+
+	##MANUEL
+	#new types defined in new slurm.h. These are used by functions, so they are neccessary
+
+
+	ctypedef struct task_ext_msg:
+		uint32_t num_tasks
+		uint32_t *task_id_list
+		uint32_t return_code
+		uint32_t job_id
+		uint32_t step_id
+
+	ctypedef task_ext_msg task_exit_msg_t
+
+
+	ctypedef struct launch_tasks_response_msg:
+		uint32_t return_code
+		char *node_name
+		uint32_t srun_node_id
+		uint32_t count_of_pids
+		uint32_t *local_pids
+		uint32_t *task_ids
+	ctypedef launch_tasks_response_msg launch_tasks_response_msg_t
+
+	ctypedef struct srun_ping_msg:
+		uint32_t job_id
+		uint32_t step_id
+	ctypedef srun_ping_msg srun_ping_msg_t
+
+
+	ctypedef struct srun_job_complete_msg:
+		uint32_t job_id
+		uint32_t step_id
+	ctypedef srun_job_complete_msg srun_job_complete_msg_t
+
+	
+
+	ctypedef struct srun_timeout_msg:
+		uint32_t job_id
+		uint32_t step_id
+		time_t timeout
+	ctypedef srun_timeout_msg srun_timeout_msg_t
+
+
+	ctypedef struct srun_user_msg:
+		uint32_t job_id
+		char *msg
+	ctypedef srun_user_msg srun_user_msg_t
+
+
+	ctypedef struct srun_node_fail_msg:
+		uint32_t job_id
+		char *nodelist
+		uint32_t step_id
+	ctypedef srun_node_fail_msg srun_node_fail_msg_t
+
+	ctypedef struct submit_response_msg:
+		uint32_t job_id
+		uint32_t step_id
+		uint32_t error_code
+	ctypedef submit_response_msg submit_response_msg_t
+
+
+
+	# ctypedef sbcast_cred sbcast_cred_t
+
+	ctypedef struct job_sbcast_cred_msg:
+		uint32_t job_id
+		#slurm_addr_t *node_addr
+		uint32_t node_cnt
+		char *node_list
+	#	sbcast_cred_t *sbcast_cred
+
+	ctypedef job_sbcast_cred_msg job_sbcast_cred_msg_t
+
+
+	ctypedef struct slurm_license_info:
+		char *name
+		uint32_t total
+		uint32_t in_use
+		uint32_t available
+		uint8_t remote
+
+	ctypedef slurm_license_info slurm_license_info_t
+
+	ctypedef struct license_info_msg:
+		time_t last_update
+		uint32_t num_lic
+		slurm_license_info_t *lic_array
+	ctypedef license_info_msg license_info_msg_t
+
+	ctypedef struct slurm_step_ctx_params_t:
+		uint16_t ckpt_interval
+		uint32_t cpu_count
+		uint32_t cpu_freq
+		uint16_t exclusive
+		char *features
+		uint16_t immediate
+		uint32_t job_id
+		uint32_t pn_min_memory
+		char *ckpt_dir
+		char *gres
+		char *name
+		char *network
+		uint32_t profile
+		uint8_t no_kill
+		uint32_t min_nodes
+		uint32_t max_nodes
+		char *node_list
+		uint32_t overcommit
+		uint16_t plane_size
+		uint16_t relative
+		uint16_t resv_port_cnt
+		uint32_t task_count
+		uint16_t task_dist
+		uint32_t time_limit
+		uid_t uid
+		uint16_t verbose_level
+
+	ctypedef struct inout_struct:
+		int fd
+		uint32_t taskid
+		uint32_t nodeid
+
+
+	ctypedef struct slurm_step_io_fds: 
+		inout_struct _in
+		inout_struct _out
+		inout_struct _err
+
+	ctypedef slurm_step_io_fds slurm_step_io_fds_t
+
+
+	ctypedef struct slurm_step_launch_params_t:
+		char *alias_list
+		uint32_t argc
+		char **argv
+		uint32_t envc
+		char **env
+		char *cwd
+		uint32_t user_managed_io
+		uint32_t msg_timeout
+		uint32_t buffered_stdio
+		uint32_t labelio
+		char *remote_output_filename
+		char *remote_error_filename
+		char *remote_input_filename
+		slurm_step_io_fds_t local_fds
+		uint32_t gid
+		uint32_t multi_prog
+		uint32_t slurmd_debug
+		uint32_t parallel_debug
+		uint32_t profile
+		char *task_prolog
+		char *task_epilog
+		uint16_t cpu_bind_type
+		char *cpu_bind
+		uint32_t cpu_freq
+		uint16_t mem_bind_type
+		char *mem_bind
+		uint16_t max_sockets
+		uint16_t max_cores
+		uint16_t max_threads
+		uint16_t cpus_per_task
+		uint16_t task_dist
+		char *partition
+		uint32_t preserve_env
+		char *mpi_plugin_name
+		uint8_t open_mode
+		char *acctg_freq
+		uint32_t pty
+		char *ckpt_dir
+		char *restart_dir
+		char **spank_job_env
+		uint32_t spank_job_env_size
+
+
+	ctypedef struct slurm_step_launch_callbacks_t:
+		void (*step_complete)(srun_job_complete_msg_t *)
+		void (*step_signal)(int)
+		void (*step_timeout)(srun_timeout_msg_t *)
+		void (*task_start)(launch_tasks_response_msg_t *)
+		void (*task_finish)(task_exit_msg_t *)
+
+	ctypedef struct slurm_allocation_callbacks_t:
+		void (*ping)(srun_ping_msg_t *)
+		void (*job_complete)(srun_job_complete_msg_t *)
+		void (*timeout)(srun_timeout_msg_t *)
+		void (*user_msg)(srun_user_msg_t *)
+		void (*node_fail)(srun_node_fail_msg_t *)
+		void (*job_suspend)(suspend_msg_t *)
+
+
+
+	#Some opaque data types
+	ctypedef struct allocation_msg_thread  #MANUEL: I assume this will fail, we'll see
+
+	ctypedef allocation_msg_thread allocation_msg_thread_t
+
+	ctypedef struct slurm_step_ctx_struct
+	ctypedef slurm_step_ctx_struct slurm_step_ctx_t
+
+	ctypedef struct switch_jobinfo 
+	ctypedef switch_jobinfo switch_jobinfo_t
+
+	#I am not sure about these, i'll leave them here commented to see what ahppens
+	#ctypedef srun_step_missing_msg:
+	#	uint32_t job_id
+	#	char *nodelist
+	#	uint32_t step_id
+	#ctypedef srun_step_missing_msg srun_step_missing_msg_t
+
+	#ctypedef slurm_trigger_callbacks_t:
+	#	void (*acct_full)()
+	#	void (*dbd_fail)()
+	#	void (*dbd_resumed)()
+	#	void (*db_fail)()
+	#	void (*db_resumed)()
+
+
+
 	#
 	# List
 	#
@@ -1560,6 +1790,74 @@ cdef extern from 'slurm/slurm.h' nogil:
 	cdef extern char *slurm_sprint_front_end_table (front_end_info_t * front_end_ptr, int one_liner)
 	cdef void slurm_init_update_front_end_msg (update_front_end_msg_t * update_front_end_msg)
 	cdef extern int slurm_update_front_end (update_front_end_msg_t * front_end_msg)
+
+
+
+
+	#######MANUEL
+
+	#
+	# RESOURCE ALLOCATION FUNCTIONS
+	#
+
+	cdef extern void slurm_init_job_desc_msg (job_desc_msg_t*)
+	cdef extern int slurm_allocate_resources (job_desc_msg_t *,resource_allocation_response_msg_t ** )
+	cdef extern resource_allocation_response_msg_t* slurm_allocate_resources_blocking (const job_desc_msg_t *, time_t,
+	 void (*pending_callback)(uint32_t))
+	cdef extern void slurm_free_resource_allocation_response_msg (resource_allocation_response_msg_t *)
+	cdef extern void slurm_free_job_alloc_info_response_msg (job_alloc_info_response_msg_t *)
+	cdef extern int slurm_allocation_lookup (uint32_t job_id, job_alloc_info_response_msg_t **)
+	cdef extern int slurm_allocation_lookup_lite (uint32_, resource_allocation_response_msg_t **)
+	cdef extern char* slurm_read_hostfile (char*, int)
+	cdef extern allocation_msg_thread_t* slurm_allocation_msg_thr_create (uint16_t *, const slurm_allocation_callbacks_t *)
+	cdef extern void slurm_allocation_msg_thr_destroy (allocation_msg_thread_t *)
+	cdef extern int slurm_submit_batch_job (job_desc_msg_t *, submit_response_msg_t **)
+	cdef extern void slurm_free_submit_response_response_msg (submit_response_msg_t *)
+	cdef extern int slurm_job_will_run (job_desc_msg_t*)
+	cdef extern int slurm_sbcast_lookup (uint32_t**)
+	cdef extern void slurm_free_sbcast_cred_msg (job_sbcast_cred_msg_t*)
+
+
+	#
+	# SLURM TASK SPAWNING FUNCTIONS
+	#
+	cdef extern void slurm_step_ctx_params_t_init (slurm_step_ctx_params_t)
+	#cdef extern void slurm_step_ctx__t_init (slurm_step_ctx__t*)
+
+	cdef extern slurm_step_ctx_t* slurm_step_ctx_create (const slurm_step_ctx_params_t *)
+	cdef extern slurm_step_ctx_t* slurm_step_ctx_create_timeout (const slurm_step_ctx_params_t *, int)
+	cdef extern slurm_step_ctx_t* slurm_step_ctx_create_no_alloc (const slurm_step_ctx_params_t *, uint32_t)
+	cdef extern int slurm_step_ctx_get (slurm_step_ctx_t* , int, ...)
+	cdef extern int slurm_jobinfo_ctx_get (switch_jobinfo_t*, int, void*)
+	cdef extern int slurm_step_ctx_daemon_per_node_hack ()
+	cdef extern int slurm_step_ctx_destroy (slurm_step_ctx_t*) 
+	cdef extern void slurm_step_launch_params_t_init (slurm_step_launch_params_t *)
+	cdef extern int slurm_step_launch (slurm_step_ctx_t *,const slurm_step_launch_params_t *,const slurm_step_launch_callbacks_t*)
+	cdef extern int slurm_step_launch_add (slurm_step_ctx_t *,const slurm_step_launch_params_t *,char *node_list, int)
+	cdef extern int slurm_step_launch_wait_start (slurm_step_ctx_t*)
+	cdef extern void slurm_step_launch_wait_finish (slurm_step_ctx_t*)
+	cdef extern void slurm_step_launch_abort (slurm_step_ctx_t*)
+	cdef extern void slurm_step_launch_fwd_signal (slurm_step_ctx_t*, int)
+	cdef extern void slurm_step_launch_fwd_wake (slurm_step_ctx_t*)
+	cdef extern int slurm_mpi_plugin_init (char*)
+
+
+	#
+	# SLURM CONTROL CONFIGURATION READ/PRINT/UPDATE FUNCTIONS
+	#
+
+	cdef extern void slurm_init_update_step_msg ()
+
+
+	#
+	# SLURM JOB STEP CONFIGURATION READ/PRINT/UPDATE FUNCTIONS
+	#
+
+	cdef extern void slurm_print_job_step_info_msg ()
+	cdef extern void slurm_print_job_step_info ()
+	cdef extern char* slurm_sprint_job_step_info (job_step_info_t*, int)
+
+
 
 	#
 	# End
