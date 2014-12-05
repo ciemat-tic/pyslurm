@@ -1806,7 +1806,7 @@ cdef extern from 'slurm/slurm.h' nogil:
 	 void (*pending_callback)(uint32_t))
 	cdef extern void slurm_free_resource_allocation_response_msg (resource_allocation_response_msg_t *)
 	cdef extern void slurm_free_job_alloc_info_response_msg (job_alloc_info_response_msg_t *)
-	cdef extern int slurm_allocation_lookup (uint32_t job_id, job_alloc_info_response_msg_t **)
+	cdef extern int slurm_allocation_lookup (uint32_t, job_alloc_info_response_msg_t **)
 	cdef extern int slurm_allocation_lookup_lite (uint32_, resource_allocation_response_msg_t **)
 	cdef extern char* slurm_read_hostfile (char*, int)
 	cdef extern allocation_msg_thread_t* slurm_allocation_msg_thr_create (uint16_t *, const slurm_allocation_callbacks_t *)

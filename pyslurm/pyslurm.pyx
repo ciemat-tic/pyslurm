@@ -4517,3 +4517,149 @@ cdef class licenses:
 
 		self._licDict = licenses
 
+
+
+#MANUEL
+
+
+#
+#	RESOURCE ALLOCATION FUNCTIONS
+#
+
+#	u""" EXPLANATION
+#	:param TYPE NAME: USE
+
+#	:returns: USE
+#	:rtype: TYPE
+#	"""
+
+
+cdef class job_allocation:
+	cdef:
+		slurm.job_desc_msg_t _job_description
+		slurm.resource_allocation_response_msg_t* _resource_allocation 
+		slurm.job_alloc_info_response_msg_t * _job_allocation
+
+	def __cinit__(self):
+		a = True
+
+
+	def __dealloc__(self):
+		self.__destroy()
+
+	cpdef __destroy(self):
+
+		u"""Free the memory allocated by load licenses method. 
+		"""
+
+		#if self._msg is not NULL:
+		#	slurm.slurm_free_license_info_msg(self._msg)
+		return True
+
+	def slurm_init_job_desc_msg (self):
+		u""" initialize job descriptor with default values
+		"""
+
+		self.__slurm_init_job_desc_msg()
+
+
+	cpdef __slurm_init_job_desc_msg (self):
+
+		u""" initialize job descriptor with default values
+		:param TYPE NAME: USE
+
+		:returns: user defined job descriptor
+		:rtype: job_desc_msg_t
+		"""
+
+		slurm.slurm_init_job_desc_msg(&self._job_description)
+
+
+
+	def slurm_allocate_resources (self):
+		u""" allocate resources for a job request
+		"""
+		cdef int errCode =  self.__slurm_allocate_resources ()
+		return errCode
+
+
+	cpdef __slurm_allocate_resources (self):
+		u""" Allocate resources for a job request.  If the requested resources are not immediately available, the slurmctld will send the job_alloc_resp_msg to the sepecified node and port.
+		:param job_desc_msg  msg- description of resource allocation request. This one is taken from SELF.
+		:returns: response to request.  This only represents a job allocation if resources are immediately.  Otherwise it just contains the job id of the enqueued job request. Taken from SELF.
+		:rtype: job_alloc_resp_msg
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+		:rtype: int
+		"""
+
+		cdef int errCode = slurm.slurm_allocate_resources(&self._job_description, &self._message)
+		return errCode
+	
+
+
+	def slurm_allocate_resources_blocking(self, timeout ):
+		u""" allocate resources for a job request.  This call will block until the allocation is granted, or the specified timeout limit is reached.
+		"""
+		slurm.__slurm_allocate_resources_blocking(timeout)	
+
+
+
+	cpdef __slurm_allocate_resources_blocking(self, timeout):
+		u""" allocate resources for a job request.  This call will block until the allocation is granted, or the specified timeout limit is reached.
+		:param req - description of resource allocation request. This one is taken from self.
+		:param  timeout - amount of time, in seconds, to wait for a response before giving up. A timeout of zero will wait indefinitely.   
+		:param pending_callback - If the allocation cannot be granted immediately, the controller will put the job in the PENDING state.  If pending callback is not NULL, it will be called with the job_id of the pending job as the sole parameter.
+
+	   	 :returns:  allocation structure on success, NULL on error set errno to indicate the error (errno will be ETIMEDOUT if the timeout is reached with no allocation granted)
+	    	:rtype: resource_allocation_response_msg_t *
+		:NOTE: message buffer is cleaned before asigning a new value, just in case it was pointing to a previous one. 
+	    """
+
+		cdef slurm.time_t timeout_c = <slurm.time_t>timeout
+
+		self.__slurm_free_resource_allocation_response_msg()
+
+		self._resource_allocation =slurm.slurm_allocate_resources_blocking(&self._job_description, timeout_c, NULL)
+
+
+	
+	
+	cpdef __slurm_free_resource_allocation_response_msg (self):
+		u""" slurm_free_resource_allocation_response_msg - free slurm resource allocation response message
+		:param msg - pointer to allocation response message
+		:NOTE: buffer is loaded by slurm_allocate_resources
+		"""
+		slurm.slurm_free_resource_allocation_response_msg(self._resource_allocation)
+
+
+
+	
+	def slurm_allocation_lookup(self,job_id):
+		u""" initialize job descriptor with default values
+		"""
+		self.__slurm_allocation_lookup(job_id)
+
+	cpdef __slurm_allocation_lookup (self, job_id):
+		u""" initialize job descriptor with default values
+		:param job_id - job allocation identifier
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+		:rtype: job_alloc_info_response_msg_t
+		"""
+		
+		cdef uint32_t job_id_c = <uint32_t>job_id		
+
+		errCode = slurm.slurm_allocation_lookup(job_id_c, &self.__job_allocation)
+		return errCode
+
+
+
+
+
+	cpdef __slurm_free_job_alloc_info_response_msg (self):
+		u""" slurm_free_resource_allocation_response_msg - free slurm resource allocation lookup message
+		:param msg -  pointer to job allocation info response message
+		:NOTE: buffer is loaded by slurm_allocation_lookup
+		"""
+		slurm.__slurm_free_job_alloc_info_response_msg (self._job_allocation)
+
+
