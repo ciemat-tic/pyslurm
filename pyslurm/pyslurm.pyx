@@ -4526,19 +4526,14 @@ cdef class licenses:
 #	RESOURCE ALLOCATION FUNCTIONS
 #
 
-#	u""" EXPLANATION
-#	:param TYPE NAME: USE
-
-#	:returns: USE
-#	:rtype: TYPE
-#	"""
-
 
 cdef class job_allocation:
 	cdef:
 		slurm.job_desc_msg_t _job_description
 		slurm.resource_allocation_response_msg_t* _resource_allocation 
 		slurm.job_alloc_info_response_msg_t * _job_allocation
+		slurm.submit_response_msg_t * _slurm_submit_response_msg
+
 
 	def __cinit__(self):
 		a = True
@@ -4571,9 +4566,10 @@ cdef class job_allocation:
 		:returns: user defined job descriptor
 		:rtype: job_desc_msg_t
 		"""
+		cdef slurm.job_desc_msg_t new_job_description 
 
-		slurm.slurm_init_job_desc_msg(&self._job_description)
-
+		slurm.slurm_init_job_desc_msg(&new_job_description)
+		self._job_description= new_job_description
 
 
 	def slurm_allocate_resources (self):
@@ -4591,8 +4587,14 @@ cdef class job_allocation:
 		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
 		:rtype: int
 		"""
+		cdef slurm.job_desc_msg_t aux_job_description = self._job_description
+		cdef slurm.resource_allocation_response_msg_t* new_resource_allocation
+		cdef int errCode = slurm.slurm_allocate_resources(&aux_job_description, &new_resource_allocation)
 
-		cdef int errCode = slurm.slurm_allocate_resources(&self._job_description, &self._message)
+		if errCode == 0:
+			self.__slurm_free_resource_allocation_response_msg()
+			self._resource_allocation = new_resource_allocation
+			
 		return errCode
 	
 
@@ -4600,8 +4602,8 @@ cdef class job_allocation:
 	def slurm_allocate_resources_blocking(self, timeout ):
 		u""" allocate resources for a job request.  This call will block until the allocation is granted, or the specified timeout limit is reached.
 		"""
-		slurm.__slurm_allocate_resources_blocking(timeout)	
-
+		cdef errNo = slurm.__slurm_allocate_resources_blocking(timeout)	
+		return errNo
 
 
 	cpdef __slurm_allocate_resources_blocking(self, timeout):
@@ -4617,12 +4619,14 @@ cdef class job_allocation:
 
 		cdef slurm.time_t timeout_c = <slurm.time_t>timeout
 
-		self.__slurm_free_resource_allocation_response_msg()
+		cdef slurm.job_desc_msg_t aux_job_description = self._job_description
 
-		self._resource_allocation =slurm.slurm_allocate_resources_blocking(&self._job_description, timeout_c, NULL)
-
-
-	
+		self._resource_allocation =  slurm.slurm_allocate_resources_blocking(&aux_job_description, timeout_c, NULL)
+		
+		if self._resource_allocation == NULL:
+			return -1
+		else:
+			return 0
 	
 	cpdef __slurm_free_resource_allocation_response_msg (self):
 		u""" slurm_free_resource_allocation_response_msg - free slurm resource allocation response message
@@ -4642,24 +4646,177 @@ cdef class job_allocation:
 	cpdef __slurm_allocation_lookup (self, job_id):
 		u""" initialize job descriptor with default values
 		:param job_id - job allocation identifier
+		:out resp - job allocation information
 		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
 		:rtype: job_alloc_info_response_msg_t
 		"""
 		
 		cdef uint32_t job_id_c = <uint32_t>job_id		
+		
+		cdef slurm.job_alloc_info_response_msg_t* new_job_allocation = self._job_allocation
+		errCode = slurm.slurm_allocation_lookup(job_id_c, &new_job_allocation)
 
-		errCode = slurm.slurm_allocation_lookup(job_id_c, &self.__job_allocation)
+		if errCode == 0:
+			self.__slurm_free_job_alloc_info_response_msg()
+			self._job_allocation = new_job_allocation
+	
 		return errCode
-
-
-
-
 
 	cpdef __slurm_free_job_alloc_info_response_msg (self):
 		u""" slurm_free_resource_allocation_response_msg - free slurm resource allocation lookup message
 		:param msg -  pointer to job allocation info response message
 		:NOTE: buffer is loaded by slurm_allocation_lookup
 		"""
-		slurm.__slurm_free_job_alloc_info_response_msg (self._job_allocation)
+
+		slurm.slurm_free_job_alloc_info_response_msg (self._job_allocation)
 
 
+
+	def slurm_allocation_lookup_lite (self, job_id):
+		u""" retrieve minor info for an existing resource allocation
+		"""
+		errCode = self.__slurm_allocation_lookup_lite(job_id)
+		return errCode
+
+
+	cpdef __slurm_allocation_lookup_lite (self, job_id):
+		u""" retrieve minor info for an existing resource allocation
+		:param job_id - job allocation identifier
+		:OUT resp - job allocation information
+
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+
+		:rtype: job_desc_msg
+		"""
+
+		cdef uint32_t job_id_c = <uint32_t>job_id		
+	
+		cdef slurm.resource_allocation_response_msg_t* new_resource_allocation = self._resource_allocation
+		errCode = slurm.slurm_allocation_lookup_lite(job_id_c, &new_resource_allocation)
+
+		if errCode == 0:
+			self.__slurm_free_resource_allocation_response_msg()
+			self._resource_allocation = new_resource_allocation
+
+		return errCode
+
+
+
+
+	def slurm_read_hostfile (self, filename, number_of_nodes):
+		u"""  Read a SLURM hostfile specified by "filename". "filename" must contain a list of SLURM NodeNames, one per line. Reads up to "n" number of hostnames from the file. Returns a string representing a hostlist ranged string of the contents of the file.  This is a helper function, it does not contact any SLURM daemons.
+		"""
+
+		return self.__slurm_read_hostfile(filename, number_of_nodes)
+	
+
+
+	cpdef __slurm_read_hostfile (self, filename, number_of_nodes):
+		u"""  Read a SLURM hostfile specified by "filename". "filename" must contain a list of SLURM NodeNames, one per line. Reads up to "n" number of hostnames from the file. Returns a string representing a hostlist ranged string of the contents of the file.  This is a helper function, it does not contact any SLURM daemons.
+		:param IN n - number of NodeNames required
+		:param IN port - port we are listening for messages on from the controller
+
+		:RET - a string representing the hostlist.  Returns NULL if there are fewer than "n" hostnames in the file, or if an error occurs.
+		:rtype: string
+		"""
+
+		return slurm.slurm_read_hostfile(filename, number_of_nodes)
+
+
+
+
+	cpdef __slurm_allocation_msg_thr_create (self, port, callbacks):
+		u""" slurm_allocation_msg_thr_create - startup a message handler talking with the controller dealing with messages from the controller during an allocation.
+		:param  IN port - port we are listening for messages on from the controller
+		:param IN callbacks - callbacks for different types of messages
+		:returns: allocation_msg_thread_t * or NULL on failure
+		:rtype: allocation_msg_thread_t * 
+		"""
+		
+		#not yet implemented
+		return -1
+
+
+
+	cpdef __slurm_allocation_msg_thr_destroy (self, msg_thr):
+		u"""  slurm_allocation_msg_thr_destroy - shutdown the message handler talking with the controller dealing with messages from the controller during an allocation.
+		:param IN msg_thr - allocation_msg_thread_t pointer allocated with slurm_allocation_msg_thr_create
+		"""
+		#not yet implemented
+		return -1
+
+
+
+	def slurm_submit_batch_job (self):
+		u"""  issue RPC to submit a job for later execution
+		"""
+		
+		return self.__slurm_submit_batch_job()
+		
+
+	cpdef __slurm_submit_batch_job (self):
+		u"""  issue RPC to submit a job for later execution
+		:param  IN job_desc_msg - description of batch job request
+
+		:returns:  response to request
+		:rtype: slurm_alloc_msg -
+		"""
+		
+
+		cdef slurm.job_desc_msg_t new_job_description = self._job_description
+		cdef slurm.submit_response_msg_t * new_slurm_submit_response_msg = NULL
+
+		errNo = slurm.slurm_submit_batch_job(&new_job_description, &new_slurm_submit_response_msg)
+
+		if errNo == 0:  #TODO: Check this condition and where to free anything
+			if self._slurm_alloc_msg is not NULL:
+				self.__slurm_free_submit_response_response_msg()
+			
+			self._slurm_submit_response_msg =new_slurm_submit_response_msg
+			
+		return self.__slurm_submit_batch_job()
+
+
+	cpdef __slurm_free_submit_response_response_msg (self):
+		u""" free slurm job submit response message
+		:param msg - pointer to job submit response message
+		"""
+
+		slurm.slurm_free_submit_response_response_msg(self._slurm_submit_response_msg)
+
+
+
+	def slurm_job_will_run (self):
+		u""" determine if a job would execute immediately if submitted now
+		:param job_desc_msg - description of resource allocation request
+
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+		:rtype: int
+		"""
+		return self.__slurm_job_will_run()
+
+
+	cpdef __slurm_job_will_run (self):
+		u""" determine if a job would execute immediately if submitted now
+		:param job_desc_msg - description of resource allocation request
+
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+		:rtype: int
+		"""
+
+		cdef slurm.job_desc_msg_t  new_job_description =  self._job_description
+
+		return slurm.slurm_job_will_run(&new_job_description)
+
+
+	
+
+	def slurm_sbcast_lookup (self, jobid, info):
+		u""" retrieve info for an existing resource allocation including a credential needed for sbcast
+		:param IN jobid - job allocation identifier
+		:param OUT info - job allocation information including a credential for sbcast
+		:returns:  0 on success, otherwise return -1 and set errno to indicate the error
+		:rtype: int
+		"""
+		#not yet implemented
+		return -1

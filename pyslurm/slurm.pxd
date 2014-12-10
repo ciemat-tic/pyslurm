@@ -1814,7 +1814,7 @@ cdef extern from 'slurm/slurm.h' nogil:
 	cdef extern int slurm_submit_batch_job (job_desc_msg_t *, submit_response_msg_t **)
 	cdef extern void slurm_free_submit_response_response_msg (submit_response_msg_t *)
 	cdef extern int slurm_job_will_run (job_desc_msg_t*)
-	cdef extern int slurm_sbcast_lookup (uint32_t**)
+	cdef extern int slurm_sbcast_lookup (job_sbcast_cred_msg_t **)
 	cdef extern void slurm_free_sbcast_cred_msg (job_sbcast_cred_msg_t*)
 
 
